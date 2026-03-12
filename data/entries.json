@@ -1,0 +1,24 @@
+[
+  {
+    "id": "bc_001",
+    "slug": "launch-mvp-widget",
+    "title": "Launch embed widget MVP",
+    "summary": "Added a framework-agnostic web component for Astro and any static site.",
+    "type": "new",
+    "version": "0.1.0",
+    "modules": ["widget", "embed"],
+    "machine_summary": "Web component widget available at /widget/widget.js using <bearly-change> tag.",
+    "published_at": "2026-03-12T06:40:00.000Z"
+  },
+  {
+    "id": "bc_002",
+    "slug": "add-ai-readable-feeds",
+    "title": "Add JSON feed and RSS",
+    "summary": "Exposed /feed.json and /rss.xml so AI agents can monitor updates easily.",
+    "type": "improvement",
+    "version": "0.1.0",
+    "modules": ["api", "feeds"],
+    "machine_summary": "Machine-readable feeds now available for polling and subscriptions.",
+    "published_at": "2026-03-12T06:45:00.000Z"
+  }
+]

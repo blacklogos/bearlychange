@@ -1,0 +1,13 @@
+{
+  "name": "bearlychange",
+  "version": "0.1.0",
+  "description": "Changelog for humans & agents (embed-first for Astro)",
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs",
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
