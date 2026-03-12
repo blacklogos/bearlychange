@@ -4,17 +4,19 @@
 
 Embed-first changelog MVP for Astro sites, with machine-readable feeds for AI agents.
 
-## Features (v0.1)
-- Public changelog API: `/api/changelog`
+## Features (v0.2)
+- Public changelog API: `/api/changelog` (published entries only)
 - JSON Feed: `/feed.json`
 - RSS: `/rss.xml`
 - Drop-in widget: `/widget/widget.js` + `<bearly-change>`
+- Admin panel: `/admin` with Basic Auth
+- Draft → Publish workflow
 
 ## Run locally
 
 ```bash
 npm install
-npm run dev
+ADMIN_USER=admin ADMIN_PASS=change-me npm run dev
 ```
 
 Open `http://localhost:4322`.
