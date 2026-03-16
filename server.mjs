@@ -15,6 +15,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/widget', express.static(path.join(__dirname, 'public')));
 
+// CORS for client-side fetch from the Astro site
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
+
 const dbPath = path.join(__dirname, 'data', 'entries.json');
 
 function readEntriesRaw() {
