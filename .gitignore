@@ -9,3 +9,4 @@ docs/solutions
 # Cloudflare Workers local state + secrets
 .wrangler/
 .dev.vars
+.wrangler-secrets.local

@@ -1,0 +1,53 @@
+# Deploys bearlychange to Cloudflare Workers on push to main.
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN  — create at https://dash.cloudflare.com/profile/api-tokens
+#                            with scopes: Workers Scripts:Edit, D1:Edit, Account Settings:Read
+#   CLOUDFLARE_ACCOUNT_ID — from your CF dashboard (right sidebar on any page)
+#
+# Worker-level secrets (ADMIN_PASS, BEARLYCHANGE_TOKEN) live on the deployed
+# Worker itself via `wrangler secret put` and are NOT needed here.
+
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      # Local smoke test: wrangler runs --local mode (workerd + local D1
+      # in a mktemp persist-to dir) and injects per-run secrets via --var,
+      # so CI doesn't need any CF credentials at this step.
+      - name: Smoke test
+        run: npm test
+
+      # Idempotent thanks to IF NOT EXISTS / INSERT OR IGNORE in 0001_initial.sql.
+      # When a 2nd migration is added, switch to `wrangler d1 migrations apply`.
+      - name: Apply D1 migrations (remote)
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: d1 execute bearlychange-prod --remote --file=migrations/0001_initial.sql
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
