@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Smoke test for bearlychange. Starts a server on a temp port with a
-# throwaway data file, exercises the public + admin + CLI surface, and
-# reports a pass/fail summary. Exit 0 if all pass, 1 otherwise.
+# Smoke test for bearlychange on Cloudflare Workers + D1. Boots
+# `wrangler dev` with a throwaway local D1 state dir, applies the migration,
+# exercises the public + admin + CLI surface, and reports a pass/fail
+# summary. Exit 0 if all pass, 1 otherwise.
 #
 # Run via `npm test` or `bash tests/smoke.sh`.
 set -u
@@ -9,16 +10,16 @@ set -u
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-PORT="${BEARLYCHANGE_TEST_PORT:-4399}"
+PORT="${BEARLYCHANGE_TEST_PORT:-8787}"
 ADMIN_USER="admin"
 ADMIN_PASS="smoke-test-$$"
 ADMIN_TOKEN="smoke-token-$$-$RANDOM"
 BASE="http://localhost:$PORT"
-DATA_FILE="$(mktemp -t bc-smoke.XXXXXX).json"
+WRANGLER_STATE="$(mktemp -d -t bc-wrangler.XXXXXX)"
 SERVER_LOG="$(mktemp -t bc-smoke-log.XXXXXX).log"
 
-# Default CLI auth path = Basic, so the existing assertions exercise that path.
-# Bearer-token assertions explicitly override BEARLYCHANGE_TOKEN inline below.
+# Default CLI auth path = Basic so existing assertions exercise it. Bearer
+# assertions explicitly override BEARLYCHANGE_TOKEN inline below.
 export BEARLYCHANGE_URL="$BASE"
 export BEARLYCHANGE_USER="$ADMIN_USER"
 export BEARLYCHANGE_PASS="$ADMIN_PASS"
@@ -39,8 +40,7 @@ fail() {
 }
 step() { printf "\n%s\n" "$(bold "$1")"; }
 
-# Tiny JSON probe — runs a node one-liner that evaluates a JS expression
-# against the JSON on stdin. Returns the string repr, or __err__ on parse error.
+# Tiny JSON probe — runs a node one-liner against the JSON on stdin.
 json_eval() {
   node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{try{const o=JSON.parse(d);const r=eval('o.$1');process.stdout.write(r===undefined?'__undefined__':String(r))}catch(e){process.stdout.write('__err__')}})"
 }
@@ -61,11 +61,13 @@ cleanup() {
   if [[ -n "${SERVER_PID:-}" ]] && kill -0 "$SERVER_PID" 2>/dev/null; then
     kill -9 "$SERVER_PID" 2>/dev/null || true
   fi
-  rm -f "$DATA_FILE" "$SERVER_LOG"
+  # wrangler dev forks workerd; reap any orphaned children of ours.
+  pkill -P $$ wrangler 2>/dev/null || true
+  pkill -P $$ workerd 2>/dev/null || true
+  rm -rf "$WRANGLER_STATE" "$SERVER_LOG"
 }
 trap cleanup EXIT
 
-# Refuse to clobber a server on that port.
 if command -v lsof >/dev/null 2>&1; then
   EXISTING="$(lsof -ti ":$PORT" 2>/dev/null || true)"
   if [[ -n "$EXISTING" ]]; then
@@ -74,50 +76,38 @@ if command -v lsof >/dev/null 2>&1; then
   fi
 fi
 
-# Seed: one published entry so /api/changelog returns count=1 (proves the
-# server is reading BEARLYCHANGE_DATA, not the bundled data/entries.json).
-cat > "$DATA_FILE" <<'JSON'
-[
-  {
-    "id": "bc_seed1",
-    "slug": "seed-one",
-    "title": "Seed One",
-    "summary": "published seed",
-    "type": "new",
-    "version": "0.0.1",
-    "modules": [],
-    "machine_summary": "",
-    "status": "published",
-    "created_at": "2026-01-01T00:00:00.000Z",
-    "published_at": "2026-01-01T00:00:00.000Z"
-  }
-]
-JSON
+step "provisioning isolated local D1 (state=$WRANGLER_STATE)"
+wrangler d1 execute bearlychange-prod --local --persist-to "$WRANGLER_STATE" \
+  --file=migrations/0001_initial.sql > /dev/null 2>&1 \
+  || { echo "migration failed" >&2; exit 2; }
 
-step "starting server on :$PORT (data=$DATA_FILE)"
-ADMIN_USER="$ADMIN_USER" ADMIN_PASS="$ADMIN_PASS" PORT="$PORT" BEARLYCHANGE_DATA="$DATA_FILE" \
-  BEARLYCHANGE_TOKEN="$ADMIN_TOKEN" \
-  node server.mjs > "$SERVER_LOG" 2>&1 &
+step "starting wrangler dev on :$PORT"
+# --var KEY:VALUE injects secrets without touching the user's .dev.vars.
+wrangler dev --port "$PORT" --persist-to "$WRANGLER_STATE" --log-level error \
+  --var "ADMIN_USER:$ADMIN_USER" --var "ADMIN_PASS:$ADMIN_PASS" --var "BEARLYCHANGE_TOKEN:$ADMIN_TOKEN" \
+  > "$SERVER_LOG" 2>&1 &
 SERVER_PID=$!
 
-for _ in $(seq 1 25); do
+# wrangler dev needs ~5s to boot (worker bundle + workerd cold start).
+for _ in $(seq 1 60); do
   curl -sf -o /dev/null "$BASE/" && break
-  sleep 0.2
+  sleep 0.5
 done
 if ! curl -sf -o /dev/null "$BASE/"; then
-  echo "server did not come up; log:" >&2
+  echo "wrangler dev did not come up; log:" >&2
   cat "$SERVER_LOG" >&2
   exit 2
 fi
 echo "  (pid $SERVER_PID up)"
 
-step "public surface uses BEARLYCHANGE_DATA"
+step "public surface (D1 seed)"
 COUNT="$(curl -s "$BASE/api/changelog" | json_eval count)"
-[[ "$COUNT" == "1" ]] && pass "GET /api/changelog count=1 (seeded)" || fail "GET /api/changelog count" "got '$COUNT'"
+[[ "$COUNT" == "2" ]] && pass "GET /api/changelog count=2 (seeded)" || fail "GET /api/changelog count" "got '$COUNT'"
 assert_http 200 "$BASE/feed.json"
 assert_http 200 "$BASE/rss.xml"
-assert_http 200 "$BASE/entries/seed-one"
+assert_http 200 "$BASE/entries/launch-mvp-widget"
 assert_http 404 "$BASE/entries/does-not-exist"
+assert_http 200 "$BASE/widget/widget.js"
 
 step "auth gate"
 assert_http 401 "$BASE/admin/entries"
@@ -158,7 +148,6 @@ step "bearer-token auth"
 assert_http 200 -H "Authorization: Bearer $ADMIN_TOKEN" "$BASE/admin/entries"
 assert_http 401 -H "Authorization: Bearer wrong-token" "$BASE/admin/entries"
 assert_http 200 -u "$ADMIN_USER:$ADMIN_PASS" "$BASE/admin/entries"
-# CLI using token only (no PASS).
 CLI_TOKEN_OUT="$(BEARLYCHANGE_TOKEN="$ADMIN_TOKEN" BEARLYCHANGE_PASS="" ./bin/bearlychange.mjs list --status all --json | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const a=JSON.parse(d);process.stdout.write(String(a.length))})")"
 [[ "$CLI_TOKEN_OUT" =~ ^[0-9]+$ ]] && pass "CLI authenticates via BEARLYCHANGE_TOKEN ($CLI_TOKEN_OUT entries)" || fail "CLI bearer" "got '$CLI_TOKEN_OUT'"
 CLI_TOKEN_BAD="$(BEARLYCHANGE_TOKEN="wrong-token" BEARLYCHANGE_PASS="" ./bin/bearlychange.mjs list --status all 2>&1; echo "exit=$?")"
@@ -172,8 +161,7 @@ assert_http 302 -u "$ADMIN_USER:$ADMIN_PASS" -H "Origin: $BASE" \
   -X POST "$BASE/admin/entries" \
   --data-urlencode 'slug=same-origin' --data-urlencode 'title=so' --data-urlencode 'summary=so' --data-urlencode 'version=1.0.0' --data-urlencode 'status=draft'
 
-step "concurrency: 20 parallel creates"
-# Don't use bare `wait` — it would also wait on the backgrounded server.
+step "concurrency: 20 parallel creates (D1 UNIQUE safety net)"
 race_pids=()
 for i in $(seq 1 20); do
   curl -s -u "$ADMIN_USER:$ADMIN_PASS" -H 'Content-Type: application/json' -H 'Accept: application/json' \
