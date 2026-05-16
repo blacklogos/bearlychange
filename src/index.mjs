@@ -4,9 +4,11 @@
 // the edge cache without ever invoking this code.
 import { Hono } from 'hono';
 import publicRoutes from './routes/public.mjs';
+import adminRoutes from './routes/admin.mjs';
 
 const app = new Hono();
 
 app.route('/', publicRoutes);
+app.route('/', adminRoutes);
 
 export default app;
