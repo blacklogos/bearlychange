@@ -1,3 +1,7 @@
 node_modules/
 .env
 .DS_Store
+
+# Per-machine symlink to the user's shared lessons store
+# (`ln -s ~/Dropbox/Knowledge/Lessons docs/solutions`).
+docs/solutions

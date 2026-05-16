@@ -3,9 +3,15 @@
   "version": "0.1.0",
   "description": "Changelog for humans & agents (embed-first for Astro)",
   "type": "module",
+  "bin": {
+    "bearlychange": "bin/bearlychange.mjs",
+    "bc": "bin/bearlychange.mjs"
+  },
   "scripts": {
     "dev": "node server.mjs",
-    "start": "node server.mjs"
+    "start": "node server.mjs",
+    "cli": "node bin/bearlychange.mjs",
+    "test": "bash tests/smoke.sh"
   },
   "dependencies": {
     "express": "^4.19.2"
