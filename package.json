@@ -8,12 +8,17 @@
     "bc": "bin/bearlychange.mjs"
   },
   "scripts": {
-    "dev": "node server.mjs",
-    "start": "node server.mjs",
+    "dev": "wrangler dev",
+    "dev:legacy": "node server.mjs",
+    "start": "wrangler dev",
     "cli": "node bin/bearlychange.mjs",
-    "test": "bash tests/smoke.sh"
+    "test": "bash tests/smoke.sh",
+    "db:migrate:local": "wrangler d1 execute bearlychange-prod --local --file=migrations/0001_initial.sql",
+    "db:migrate:remote": "wrangler d1 execute bearlychange-prod --remote --file=migrations/0001_initial.sql",
+    "deploy": "wrangler deploy"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "hono": "^4.12.19"
   }
 }

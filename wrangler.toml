@@ -1,0 +1,25 @@
+# Cloudflare Workers config for bearlychange.
+# - main: src/index.mjs — Worker entry (`export default { fetch }`)
+# - D1 binding `DB` backs lib/entries-store.mjs
+# - Static assets binding `ASSETS` serves the embed widget at /widget/*
+#
+# Secrets (set once per environment):
+#   wrangler secret put ADMIN_PASS
+#   wrangler secret put BEARLYCHANGE_TOKEN   # optional bearer token for CI/agents
+# For local dev, drop the same keys into .dev.vars (gitignored).
+
+name = "bearlychange"
+main = "src/index.mjs"
+compatibility_date = "2026-05-01"
+
+[vars]
+ADMIN_USER = "admin"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "bearlychange-prod"
+database_id = "3fd93ede-6bfe-47d5-99c1-98c5864083be"
+
+[assets]
+directory = "public"
+binding = "ASSETS"
