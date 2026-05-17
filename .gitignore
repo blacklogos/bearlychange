@@ -10,3 +10,7 @@ docs/solutions
 .wrangler/
 .dev.vars
 .wrangler-secrets.local
+
+# Marketing landing page lives in a separate repo (bearlychange-site).
+# Kept locally so `wrangler dev`/`deploy` still serves it from public/.
+public/index.html

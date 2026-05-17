@@ -1,0 +1,4 @@
+# Wrangler dev picks this file up automatically. Copy to .dev.vars and edit.
+# These values are LOCAL ONLY — production secrets are set via `wrangler secret put`.
+ADMIN_PASS=change-me
+BEARLYCHANGE_TOKEN=local-dev-token
