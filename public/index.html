@@ -484,7 +484,69 @@ a:hover { color: var(--text); }
   .endpoint-row { grid-template-columns: 1fr; gap: 8px; }
   .faq-grid { grid-template-columns: 1fr; }
   .install-card, .cli-card { padding: 20px; }
+  .hero-embed { text-align: left; }
 }
+
+/* ────────────────────────────────────────────────────────────────
+   wacli-inspired refresh: tighter buttons, restrained accent,
+   hover-reveal copy, continuity dividers, hero embed pill, TOC
+   ────────────────────────────────────────────────────────────────*/
+
+/* Tighter, less-rounded buttons */
+.btn { border-radius: 8px; padding: 13px 20px; }
+.cta-dark { border-radius: 8px; }
+
+/* Restrain amber — neutral nav hover, ink why-num, soft endpoint tag */
+.nav a:hover { background: rgba(20,20,20,.05); color: var(--text); }
+.why-num { color: var(--text); }
+.endpoint-method {
+  color: var(--text-muted);
+  background: rgba(20,20,20,.04);
+  border: 1px solid var(--border);
+}
+
+/* Continuity dividers + tighter section rhythm */
+.section, .faq { padding: 60px 24px; border-top: 1px solid var(--border); }
+.section:first-of-type { border-top: 0; }
+
+/* Hover-reveal copy buttons */
+.code-block .copy-btn { opacity: 0; transition: opacity .15s; }
+.code-block:hover .copy-btn,
+.code-block .copy-btn:focus-visible,
+.code-block .copy-btn.copied { opacity: 1; }
+
+/* Hero embed pill — wacli's install-pill move, adapted */
+.hero-embed-label {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .1em;
+  color: var(--accent-dark);
+  margin: 22px 0 8px;
+  display: flex; align-items: center; gap: 8px;
+}
+.hero-embed-label::before {
+  content: ''; display: block;
+  width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+}
+.hero .code-block { font-size: 12px; padding: 14px 48px 14px 16px; margin-bottom: 22px; line-height: 1.65; }
+
+/* Sticky right-rail TOC, ≥1280px viewports (doc-style scrollspy) */
+.toc {
+  display: none;
+  position: fixed; right: clamp(20px, 3vw, 56px); top: 50%; transform: translateY(-50%);
+  font-family: var(--font-mono); font-size: 10px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: .08em;
+  padding-left: 14px; border-left: 1px solid var(--border);
+  z-index: 5;
+}
+.toc a {
+  display: block; color: var(--text-faint);
+  padding: 6px 0 6px 10px; margin-left: -12px;
+  border-left: 2px solid transparent;
+  transition: color .15s, border-color .15s;
+}
+.toc a:hover { color: var(--text); }
+.toc a.active { color: var(--accent-dark); border-left-color: var(--accent); }
+@media (min-width: 1280px) { .toc { display: block; } }
 </style>
 </head>
 <body>
@@ -509,16 +571,21 @@ a:hover { color: var(--text); }
 
 <main>
 
-<section class="hero">
+<section class="hero" id="embed">
   <div class="hero-grid">
     <div>
       <h1>Changelog for humans <span class="accent">&amp; agents</span>.</h1>
       <p class="lede">
         One Web Component for your site. JSON Feed and RSS for AI agents. A tiny CLI for CI. Edge-native on Cloudflare Workers — no servers, no signup, no analytics in the read path.
       </p>
+      <div class="hero-embed-label">Drop into any HTML</div>
+      <div class="code-block" id="embed-code"><span class="tag">&lt;script</span> <span class="attr">src</span>=<span class="str">"https://bearlychange.mtri-vo.workers.dev/widget/widget.js"</span> <span class="attr">defer</span><span class="tag">&gt;&lt;/script&gt;</span>
+<span class="tag">&lt;bearly-change</span> <span class="attr">src</span>=<span class="str">"https://bearlychange.mtri-vo.workers.dev/api/changelog"</span> <span class="attr">limit</span>=<span class="str">"3"</span><span class="tag">&gt;&lt;/bearly-change&gt;</span><button class="copy-btn" data-copy="embed-code-raw">Copy</button></div>
+<textarea id="embed-code-raw" style="position:absolute;left:-9999px" aria-hidden="true">&lt;script src="https://bearlychange.mtri-vo.workers.dev/widget/widget.js" defer&gt;&lt;/script&gt;
+&lt;bearly-change src="https://bearlychange.mtri-vo.workers.dev/api/changelog" limit="3"&gt;&lt;/bearly-change&gt;</textarea>
       <div class="hero-ctas">
-        <a class="btn btn-primary" href="#embed">Embed in one line →</a>
-        <a class="btn btn-secondary" href="https://github.com/blacklogos/bearlychange">GitHub</a>
+        <a class="btn btn-primary" href="https://github.com/blacklogos/bearlychange">View on GitHub →</a>
+        <a class="btn btn-secondary" href="#cli">CLI quickstart</a>
         <a class="btn btn-tertiary" href="/api/changelog">Live JSON →</a>
       </div>
     </div>
@@ -594,17 +661,6 @@ a:hover { color: var(--text); }
         </g>
       </svg>
     </div>
-  </div>
-</section>
-
-<section class="install" id="embed">
-  <div class="install-card">
-    <div class="install-eyebrow">Fastest win — embed in any site</div>
-    <h3 class="install-title">Two lines. No build step. No framework lock-in.</h3>
-    <div class="code-block" id="embed-code"><span class="tag">&lt;script</span> <span class="attr">src</span>=<span class="str">"https://bearlychange.mtri-vo.workers.dev/widget/widget.js"</span> <span class="attr">defer</span><span class="tag">&gt;&lt;/script&gt;</span>
-<span class="tag">&lt;bearly-change</span> <span class="attr">src</span>=<span class="str">"https://bearlychange.mtri-vo.workers.dev/api/changelog"</span> <span class="attr">limit</span>=<span class="str">"3"</span><span class="tag">&gt;&lt;/bearly-change&gt;</span><button class="copy-btn" data-copy="embed-code-raw">Copy</button></div>
-<textarea id="embed-code-raw" style="position:absolute;left:-9999px" aria-hidden="true">&lt;script src="https://bearlychange.mtri-vo.workers.dev/widget/widget.js" defer&gt;&lt;/script&gt;
-&lt;bearly-change src="https://bearlychange.mtri-vo.workers.dev/api/changelog" limit="3"&gt;&lt;/bearly-change&gt;</textarea>
   </div>
 </section>
 
@@ -828,6 +884,15 @@ echo '{"title":"X","slug":"x","summary":"y","version":"0.4.1"}' \
 
 </main>
 
+<aside class="toc" aria-label="On this page">
+  <a href="#embed">Embed</a>
+  <a href="#why">Why</a>
+  <a href="#endpoints">Endpoints</a>
+  <a href="#cli">CLI</a>
+  <a href="#how">How</a>
+  <a href="#faq">FAQ</a>
+</aside>
+
 <footer class="footer">
   <div class="footer-inner">
     <span>© 2026 bearlychange · MIT</span>
@@ -883,6 +948,23 @@ document.querySelectorAll('.faq-q').forEach((btn) => {
     }
   });
 });
+
+// Scrollspy for the sticky right-rail TOC. Highlights the link whose section
+// is currently in the middle band of the viewport.
+const tocLinks = Array.from(document.querySelectorAll('.toc a'));
+const tocMap = Object.fromEntries(tocLinks.map((a) => [a.getAttribute('href').slice(1), a]));
+const tocTargets = Object.keys(tocMap).map((id) => document.getElementById(id)).filter(Boolean);
+if (tocTargets.length && 'IntersectionObserver' in window) {
+  const setActive = (id) => {
+    tocLinks.forEach((a) => a.classList.toggle('active', a.getAttribute('href') === '#' + id));
+  };
+  const observer = new IntersectionObserver((entries) => {
+    const visible = entries.filter((e) => e.isIntersecting)
+      .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+    if (visible) setActive(visible.target.id);
+  }, { rootMargin: '-30% 0px -55% 0px', threshold: [0, 0.25, 0.5, 1] });
+  tocTargets.forEach((t) => observer.observe(t));
+}
 </script>
 
 </body>
