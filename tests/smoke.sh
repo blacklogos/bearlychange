@@ -95,11 +95,14 @@ wrangler dev --port "$PORT" --persist-to "$WRANGLER_STATE" --log-level error \
 SERVER_PID=$!
 
 # wrangler dev needs ~5s to boot (worker bundle + workerd cold start).
+# Probe a route that always exists; "/" is now provided by a separate site
+# repo and may not be present in the local public/ directory.
+HEALTH="$BASE/api/changelog"
 for _ in $(seq 1 60); do
-  curl -sf -o /dev/null "$BASE/" && break
+  curl -sf -o /dev/null "$HEALTH" && break
   sleep 0.5
 done
-if ! curl -sf -o /dev/null "$BASE/"; then
+if ! curl -sf -o /dev/null "$HEALTH"; then
   echo "wrangler dev did not come up; log:" >&2
   cat "$SERVER_LOG" >&2
   exit 2
