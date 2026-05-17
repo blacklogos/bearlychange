@@ -77,9 +77,15 @@ if command -v lsof >/dev/null 2>&1; then
 fi
 
 step "provisioning isolated local D1 (state=$WRANGLER_STATE)"
-wrangler d1 execute bearlychange-prod --local --persist-to "$WRANGLER_STATE" \
-  --file=migrations/0001_initial.sql > /dev/null 2>&1 \
-  || { echo "migration failed" >&2; exit 2; }
+MIGRATION_LOG=$(mktemp -t bc-migration.XXXXXX)
+if ! wrangler d1 execute bearlychange-prod --local --persist-to "$WRANGLER_STATE" \
+  --file=migrations/0001_initial.sql > "$MIGRATION_LOG" 2>&1; then
+  echo "migration failed — wrangler output below:" >&2
+  cat "$MIGRATION_LOG" >&2
+  rm -f "$MIGRATION_LOG"
+  exit 2
+fi
+rm -f "$MIGRATION_LOG"
 
 step "starting wrangler dev on :$PORT"
 # --var KEY:VALUE injects secrets without touching the user's .dev.vars.
